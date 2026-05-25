@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import '../widgets/virasat_bottom_nav.dart';
+import 'identify_screen.dart';
+import 'quiz_screen.dart';
+import 'chatbot_screen.dart';
+import 'plan_screen.dart';
 import 'tab_screens.dart';
 
 class MainShell extends StatefulWidget {
@@ -12,12 +16,12 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
-  final _screens = const [
-    IdentifyScreen(),
-    ExploreScreen(),
-    QuizScreen(),
-    PlanScreen(),
-    ChatbotScreen(),
+  final _screens = [
+    const IdentifyScreen(),
+    const ExploreScreen(),
+    const QuizScreen(),
+    const PlanScreen(),
+    const ChatbotScreen(),
   ];
 
   @override
