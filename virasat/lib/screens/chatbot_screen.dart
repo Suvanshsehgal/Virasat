@@ -1,8 +1,19 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../theme/app_decorations.dart';
 import '../widgets/linen_background.dart';
+import '../services/api_service.dart';
+import '../services/sse_client.dart';
+
+class ChatMessage {
+  final String text;
+  final bool isUser;
+
+  const ChatMessage({required this.text, required this.isUser});
+}
 
 class ChatbotScreen extends StatefulWidget {
   const ChatbotScreen({super.key});
@@ -12,8 +23,8 @@ class ChatbotScreen extends StatefulWidget {
 }
 
 class _ChatbotScreenState extends State<ChatbotScreen> {
-  final _messages = <_ChatMessage>[
-    _ChatMessage(
+  final _messages = <ChatMessage>[
+    const ChatMessage(
       text: "Namaste! I'm your Virasat guide. Ask me anything about India's monuments, heritage, or history.",
       isUser: false,
     ),
@@ -21,11 +32,16 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   bool _isTyping = false;
+  final _api = ApiService();
+  final List<Map<String, String>> _history = [];
+  SseClient? _sseClient;
 
   @override
   void dispose() {
     _controller.dispose();
     _scrollController.dispose();
+    _sseClient?.cancel();
+    _api.dispose();
     super.dispose();
   }
 
@@ -34,24 +50,66 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     if (text.isEmpty) return;
 
     setState(() {
-      _messages.add(_ChatMessage(text: text, isUser: true));
+      _messages.add(ChatMessage(text: text, isUser: true));
       _isTyping = true;
     });
+    _history.add({'role': 'user', 'content': text});
     _controller.clear();
     _scrollToBottom();
 
-    Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      setState(() {
-        _messages.add(_ChatMessage(
-          text:
-              "That's a wonderful question about India's rich heritage. I'd be happy to help you explore more about this topic.",
-          isUser: false,
-        ));
-        _isTyping = false;
-      });
-      _scrollToBottom();
-    });
+    final body = _api.chatRequestBody(text, null, _history);
+    final url = _api.chatUrl();
+
+    _sseClient?.cancel();
+    _sseClient = SseClient(
+      url: url,
+      headers: {'Content-Type': 'application/json'},
+      body: body,
+    );
+
+    String botReply = '';
+    _sseClient!.stream().listen(
+      (event) {
+        try {
+          final data = jsonDecode(event.data) as Map<String, dynamic>;
+          if (data.containsKey('error')) {
+            botReply = 'Error: ${data['error']}';
+            return;
+          }
+          final content = data['content'] as String? ?? '';
+          botReply += content;
+          setState(() {
+            if (_messages.isNotEmpty &&
+                !_messages.last.isUser &&
+                _messages.last.text != botReply) {
+              _messages.removeLast();
+            }
+            if (_messages.isEmpty || _messages.last.isUser) {
+              _messages.add(ChatMessage(text: botReply, isUser: false));
+            } else {
+              _messages.last = ChatMessage(text: botReply, isUser: false);
+            }
+          });
+          _scrollToBottom();
+        } catch (_) {}
+      },
+      onError: (error) {
+        setState(() {
+          _isTyping = false;
+          _messages.add(ChatMessage(
+            text: 'Sorry, I encountered an error. Please try again.',
+            isUser: false,
+          ));
+        });
+        _scrollToBottom();
+      },
+      onDone: () {
+        if (botReply.isNotEmpty) {
+          _history.add({'role': 'assistant', 'content': botReply});
+        }
+        if (mounted) setState(() => _isTyping = false);
+      },
+    );
   }
 
   void _scrollToBottom() {
@@ -217,15 +275,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   }
 }
 
-class _ChatMessage {
-  final String text;
-  final bool isUser;
-
-  const _ChatMessage({required this.text, required this.isUser});
-}
-
 class _ChatBubble extends StatelessWidget {
-  final _ChatMessage message;
+  final ChatMessage message;
 
   const _ChatBubble({required this.message});
 
