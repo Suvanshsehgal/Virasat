@@ -13,18 +13,34 @@ class VirasatBottomNav extends StatelessWidget {
   });
 
   static const tabs = [
-    _TabData(Icons.camera_alt_outlined, 'Identify'),
-    _TabData(Icons.explore_outlined, 'Explore'),
-    _TabData(Icons.quiz_outlined, 'Quiz'),
-    _TabData(Icons.map_outlined, 'Plan'),
-    _TabData(Icons.smart_toy_outlined, 'Chatbot'),
+    _TabData(Icons.camera_alt_outlined, Icons.camera_alt, 'Identify'),
+    _TabData(Icons.explore_outlined, Icons.explore, 'Explore'),
+    _TabData(Icons.quiz_outlined, Icons.quiz, 'Quiz'),
+    _TabData(Icons.map_outlined, Icons.map, 'Plan'),
+    _TabData(Icons.smart_toy_outlined, Icons.smart_toy, 'Chatbot'),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 72,
-      decoration: const BoxDecoration(color: Color(0xFF1C1209)),
+      height: 68,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF1C1209),
+            Color(0xFF14100A),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
       child: Row(
         children: List.generate(tabs.length, (i) {
           final isActive = i == currentIndex;
@@ -50,54 +66,100 @@ class _TabItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Gold pill indicator
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOutCubic,
-          width: isActive ? 24 : 0,
-          height: 3,
-          margin: const EdgeInsets.only(top: 4),
-          decoration: BoxDecoration(
-            color: AppColors.gold,
-            borderRadius: BorderRadius.circular(2),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Spacer(flex: 2),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutCubic,
+                transform: isActive
+                    ? Matrix4.translationValues(0, -1, 0)
+                    : Matrix4.translationValues(0, 0, 0),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutCubic,
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isActive
+                        ? AppColors.gold.withValues(alpha: 0.15)
+                        : Colors.transparent,
+                    boxShadow: isActive
+                        ? [
+                            BoxShadow(
+                              color: AppColors.gold.withValues(alpha: 0.2),
+                              blurRadius: 12,
+                              spreadRadius: 1,
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Icon(
+                    isActive ? tab.activeIcon : tab.icon,
+                    size: 22,
+                    color: isActive ? AppColors.gold : AppColors.textMuted,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 300),
+                style: TextStyle(
+                  fontFamily: AppTypography.inter,
+                  fontSize: 10,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                  color: isActive ? AppColors.gold : AppColors.textMuted,
+                  letterSpacing: 0.3,
+                ),
+                child: Text(tab.label),
+              ),
+              const Spacer(flex: 2),
+            ],
           ),
-        ),
-        const Spacer(),
-        // Icon
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOutCubic,
-          transform: isActive
-              ? Matrix4.translationValues(0, -2, 0)
-              : Matrix4.translationValues(0, 0, 0),
-          child: Icon(
-            tab.icon,
-            size: 24,
-            color: isActive ? AppColors.gold : AppColors.textMuted,
+          Positioned(
+            top: 0,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+              width: isActive ? 20 : 0,
+              height: 3,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.gold, AppColors.goldLight],
+                ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(isActive ? 2 : 0),
+                  bottomRight: Radius.circular(isActive ? 2 : 0),
+                ),
+                boxShadow: isActive
+                    ? [
+                        BoxShadow(
+                          color: AppColors.gold.withValues(alpha: 0.4),
+                          blurRadius: 6,
+                        ),
+                      ]
+                    : null,
+              ),
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          tab.label,
-          style: TextStyle(
-            fontFamily: AppTypography.inter,
-            fontSize: 10,
-            fontWeight: FontWeight.w500,
-            color: isActive ? AppColors.gold : AppColors.textMuted,
-          ),
-        ),
-        const Spacer(),
-      ],
+        ],
+      ),
     );
   }
 }
 
 class _TabData {
   final IconData icon;
+  final IconData activeIcon;
   final String label;
 
-  const _TabData(this.icon, this.label);
+  const _TabData(this.icon, this.activeIcon, this.label);
 }

@@ -15,7 +15,8 @@ class CompareMonumentsScreen extends StatefulWidget {
       _CompareMonumentsScreenState();
 }
 
-class _CompareMonumentsScreenState extends State<CompareMonumentsScreen> {
+class _CompareMonumentsScreenState extends State<CompareMonumentsScreen>
+    with TickerProviderStateMixin {
   final _monument1Controller = TextEditingController();
   final _monument2Controller = TextEditingController();
   final _api = ApiService();
@@ -23,11 +24,42 @@ class _CompareMonumentsScreenState extends State<CompareMonumentsScreen> {
   Map<String, dynamic>? _comparison;
   String? _error;
 
+  late AnimationController _slideController;
+  late AnimationController _breatheController;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _breatheAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _breatheController = AnimationController(
+      duration: const Duration(seconds: 3),
+      vsync: this,
+    )..repeat(reverse: true);
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0.04, 0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic));
+    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _slideController, curve: Curves.easeOut),
+    );
+    _breatheAnimation = Tween<double>(begin: 1.0, end: 1.03).animate(
+      CurvedAnimation(parent: _breatheController, curve: Curves.easeInOutSine),
+    );
+  }
+
   @override
   void dispose() {
     _monument1Controller.dispose();
     _monument2Controller.dispose();
     _api.dispose();
+    _slideController.dispose();
+    _breatheController.dispose();
     super.dispose();
   }
 
@@ -44,6 +76,7 @@ class _CompareMonumentsScreenState extends State<CompareMonumentsScreen> {
 
     try {
       _comparison = await _api.compareMonuments(monument1: m1, monument2: m2);
+      _slideController.forward(from: 0);
     } on ApiException catch (e) {
       _error = '${e.statusCode}: ${e.message}';
     } catch (e) {
@@ -68,13 +101,13 @@ class _CompareMonumentsScreenState extends State<CompareMonumentsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildAppBar(),
-                  const SizedBox(height: 12),
+                  _buildHeader(),
+                  const SizedBox(height: 16),
                   _buildDivider(),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: _comparison != null
                           ? _buildComparisonResult()
                           : _buildSetupForm(),
@@ -82,7 +115,7 @@ class _CompareMonumentsScreenState extends State<CompareMonumentsScreen> {
                   ),
                   if (_comparison == null)
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
                       child: GoldButton(label: 'Compare', onTap: _compare),
                     ),
                 ],
@@ -95,24 +128,39 @@ class _CompareMonumentsScreenState extends State<CompareMonumentsScreen> {
     );
   }
 
-  Widget _buildAppBar() {
+  Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 24, 0),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Row(
         children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back),
-            color: AppColors.textPrimary,
-            onPressed: () => Navigator.of(context).pop(),
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.gold, AppColors.goldLight],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.gold.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.compare_arrows_outlined, color: AppColors.darkBase, size: 22),
           ),
+          const SizedBox(width: 14),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Compare Monuments',
-                  style: AppTypography.screenTitle),
+              Text('Compare Monuments', style: AppTypography.screenTitle),
               Text(
                 'स्मारकों की तुलना',
-                style: AppTypography.devanagariSubtitle(size: 24),
+                style: AppTypography.devanagariSubtitle(size: 22),
               ),
             ],
           ),
@@ -123,95 +171,231 @@ class _CompareMonumentsScreenState extends State<CompareMonumentsScreen> {
 
   Widget _buildDivider() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
       height: 3,
       decoration: AppDecorations.tricolorDivider,
       width: double.infinity,
     );
   }
 
+  Widget _buildError() {
+    if (_error == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.terracotta.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.terracotta.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, size: 18, color: AppColors.terracotta),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _error!,
+                style: TextStyle(
+                  color: AppColors.terracotta,
+                  fontSize: 13,
+                  fontFamily: AppTypography.inter,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildSetupForm() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildHeroSection(),
+        const SizedBox(height: 28),
         _buildMonumentInputs(),
         const SizedBox(height: 28),
         _buildPopularComparisons(),
-        if (_error != null) ...[
-          const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.terracotta.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              _error!,
-              style: TextStyle(color: AppColors.terracotta, fontSize: 13),
-            ),
-          ),
-        ],
+        _buildError(),
+        const SizedBox(height: 8),
       ],
+    );
+  }
+
+  Widget _buildHeroSection() {
+    return AnimatedBuilder(
+      animation: _breatheAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _breatheAnimation.value,
+          child: child,
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.gold.withValues(alpha: 0.08),
+              AppColors.gold.withValues(alpha: 0.02),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.gold.withValues(alpha: 0.1)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.gold, AppColors.goldLight],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.gold.withValues(alpha: 0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.compare_arrows,
+                color: AppColors.darkBase,
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Compare Monuments',
+              style: AppTypography.sectionHeader.copyWith(fontSize: 22),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Side-by-side analysis of heritage sites',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: AppTypography.inter,
+                fontSize: 13,
+                color: AppColors.textMuted,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildMonumentInputs() {
     return Column(
       children: [
-        TextField(
-          controller: _monument1Controller,
-          decoration: InputDecoration(
-            hintText: 'First monument...',
-            hintStyle: TextStyle(
-              fontFamily: AppTypography.inter,
-              fontSize: 14,
-              color: AppColors.textMuted,
-            ),
-            prefixIcon: const Icon(
-              Icons.account_balance_outlined,
-              size: 22,
-              color: AppColors.gold,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.cardSurface,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: AppColors.cardShadow,
+            border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+          ),
+          child: Column(
             children: [
-              const Expanded(child: Divider(color: AppColors.border)),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'VS',
-                  style: TextStyle(
-                    fontFamily: AppTypography.playfairDisplay,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 18,
-                    color: AppColors.gold,
-                    letterSpacing: 2,
+              TextField(
+                controller: _monument1Controller,
+                decoration: InputDecoration(
+                  hintText: 'First monument...',
+                  hintStyle: TextStyle(
+                    fontFamily: AppTypography.inter,
+                    fontSize: 14,
+                    color: AppColors.textMuted,
+                  ),
+                  prefixIcon: Icon(Icons.looks_one_outlined, size: 20, color: AppColors.gold),
+                  filled: true,
+                  fillColor: AppColors.pageBg,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.gold, width: 2),
+                  ),
+                ),
+                style: TextStyle(
+                  fontFamily: AppTypography.inter,
+                  fontSize: 15,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'VS',
+                    style: TextStyle(
+                      fontFamily: AppTypography.playfairDisplay,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                      color: AppColors.gold,
+                      letterSpacing: 2,
+                    ),
                   ),
                 ),
               ),
-              const Expanded(child: Divider(color: AppColors.border)),
+              TextField(
+                controller: _monument2Controller,
+                decoration: InputDecoration(
+                  hintText: 'Second monument...',
+                  hintStyle: TextStyle(
+                    fontFamily: AppTypography.inter,
+                    fontSize: 14,
+                    color: AppColors.textMuted,
+                  ),
+                  prefixIcon: Icon(Icons.looks_two_outlined, size: 20, color: AppColors.terracotta),
+                  filled: true,
+                  fillColor: AppColors.pageBg,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.terracotta, width: 2),
+                  ),
+                ),
+                style: TextStyle(
+                  fontFamily: AppTypography.inter,
+                  fontSize: 15,
+                  color: AppColors.textPrimary,
+                ),
+              ),
             ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _monument2Controller,
-          decoration: InputDecoration(
-            hintText: 'Second monument...',
-            hintStyle: TextStyle(
-              fontFamily: AppTypography.inter,
-              fontSize: 14,
-              color: AppColors.textMuted,
-            ),
-            prefixIcon: const Icon(
-              Icons.account_balance_outlined,
-              size: 22,
-              color: AppColors.terracotta,
-            ),
           ),
         ),
       ],
@@ -219,61 +403,48 @@ class _CompareMonumentsScreenState extends State<CompareMonumentsScreen> {
   }
 
   Widget _buildPopularComparisons() {
+    final pairs = [
+      ('Taj Mahal', 'Red Fort'),
+      ('Qutub Minar', 'Charminar'),
+      ('Gateway of India', 'India Gate'),
+      ('Hawa Mahal', 'Mysore Palace'),
+      ('Ajanta Caves', 'Ellora Caves'),
+      ('Sun Temple', 'Meenakshi Temple'),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Popular Comparisons',
-          style: AppTypography.body.copyWith(
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-          ),
+        Row(
+          children: [
+            Icon(Icons.trending_up_outlined, size: 16, color: AppColors.goldDark),
+            const SizedBox(width: 8),
+            Text(
+              'Popular Comparisons',
+              style: TextStyle(
+                fontFamily: AppTypography.inter,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: AppColors.textPrimary,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 4),
-        Text(
-          'लोकप्रिय तुलनाएँ',
-          style: AppTypography.devanagariSubtitle(size: 16),
+        Padding(
+          padding: const EdgeInsets.only(left: 24),
+          child: Text(
+            'लोकप्रिय तुलनाएँ',
+            style: AppTypography.devanagariSubtitle(size: 15),
+          ),
         ),
-        const SizedBox(height: 14),
-        _ComparisonChip(
-          m1: 'Taj Mahal',
-          m2: 'Red Fort',
-          onTap: () => _selectPair('Taj Mahal', 'Red Fort'),
-        ),
-        const SizedBox(height: 10),
-        _ComparisonChip(
-          m1: 'Qutub Minar',
-          m2: 'Charminar',
-          onTap: () => _selectPair('Qutub Minar', 'Charminar'),
-        ),
-        const SizedBox(height: 10),
-        _ComparisonChip(
-          m1: 'Gateway of India',
-          m2: 'India Gate',
-          onTap: () =>
-              _selectPair('Gateway of India', 'India Gate'),
-        ),
-        const SizedBox(height: 10),
-        _ComparisonChip(
-          m1: 'Hawa Mahal',
-          m2: 'Mysore Palace',
-          onTap: () =>
-              _selectPair('Hawa Mahal', 'Mysore Palace'),
-        ),
-        const SizedBox(height: 10),
-        _ComparisonChip(
-          m1: 'Ajanta Caves',
-          m2: 'Ellora Caves',
-          onTap: () =>
-              _selectPair('Ajanta Caves', 'Ellora Caves'),
-        ),
-        const SizedBox(height: 10),
-        _ComparisonChip(
-          m1: 'Sun Temple',
-          m2: 'Meenakshi Temple',
-          onTap: () =>
-              _selectPair('Sun Temple', 'Meenakshi Temple'),
-        ),
+        const SizedBox(height: 12),
+        ...pairs.map((pair) => _ComparisonChip(
+              m1: pair.$1,
+              m2: pair.$2,
+              onTap: () => _selectPair(pair.$1, pair.$2),
+            )),
       ],
     );
   }
@@ -284,126 +455,119 @@ class _CompareMonumentsScreenState extends State<CompareMonumentsScreen> {
     final comp = _comparison!['comparison'] as Map<String, dynamic>? ?? {};
     final funFacts = _comparison!['fun_facts'] as List<dynamic>? ?? [];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.compare_arrows, color: AppColors.gold, size: 22),
-            const SizedBox(width: 8),
-            Text('Comparison Result', style: AppTypography.sectionHeader),
-          ],
-        ),
-        const SizedBox(height: 20),
-        _buildMonumentCard(m1, AppColors.gold, 'Monument 1'),
-        const SizedBox(height: 12),
-        Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.gold.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'VS',
-              style: TextStyle(
-                fontFamily: AppTypography.playfairDisplay,
-                fontWeight: FontWeight.w700,
-                fontSize: 20,
-                color: AppColors.gold,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildMonumentCard(m2, AppColors.terracotta, 'Monument 2'),
-
-        if (comp.isNotEmpty) ...[
-          const SizedBox(height: 28),
-          _buildComparisonSection(comp),
-        ],
-
-        if (funFacts.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.gold.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
               children: [
-                Text(
-                  'Fun Facts',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
-                    fontFamily: AppTypography.inter,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.gold, AppColors.goldLight],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.gold.withValues(alpha: 0.25),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.compare_arrows, size: 14, color: AppColors.darkBase),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Comparison Result',
+                        style: TextStyle(
+                          fontFamily: AppTypography.inter,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                          color: AppColors.darkBase,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 8),
-                ...funFacts.map((f) => Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('✨ ',
-                              style: TextStyle(fontSize: 13)),
-                          Expanded(
-                            child: Text(
-                              f as String,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: AppColors.textSecondary,
-                                height: 1.4,
-                                fontFamily: AppTypography.inter,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )),
               ],
             ),
-          ),
-        ],
-
-        const SizedBox(height: 24),
-        Center(
-          child: GoldButton(
-            label: 'Compare New Pair',
-            onTap: () => setState(() => _comparison = null),
-          ),
+            const SizedBox(height: 20),
+            _buildMonumentCard(m1, AppColors.gold),
+            const SizedBox(height: 8),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.gold.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.gold.withValues(alpha: 0.2)),
+                ),
+                child: Icon(Icons.compare_arrows, color: AppColors.gold, size: 20),
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildMonumentCard(m2, AppColors.terracotta),
+            if (comp.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              _buildComparisonSection(comp),
+            ],
+            if (funFacts.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              _buildFunFacts(funFacts),
+            ],
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              child: GoldButton(
+                label: 'Compare New Pair',
+                onTap: () => setState(() => _comparison = null),
+              ),
+            ),
+            const SizedBox(height: 32),
+          ],
         ),
-        const SizedBox(height: 24),
-      ],
+      ),
     );
   }
 
-  Widget _buildMonumentCard(Map<String, dynamic> m, Color accent, String label) {
+  Widget _buildMonumentCard(Map<String, dynamic> m, Color accent) {
     final name = m['name'] as String? ?? '';
     final location = m['location'] as String? ?? '';
     final builtYear = m['built_year'] as String? ?? '';
     final builtBy = m['built_by'] as String? ?? '';
     final architecture = m['architecture'] as String? ?? '';
-    final material = m['material'] as String? ?? '';
     final unesco = m['unesco'] as String? ?? '';
-    final height = m['height_or_size'] as String? ?? '';
     final significance = m['significance'] as String? ?? '';
     final unique = m['unique_feature'] as String? ?? '';
-    final bestTime = m['best_time'] as String? ?? '';
-    final entryFee = m['entry_fee'] as String? ?? '';
-    final visitors = m['visitors_per_year'] as String? ?? '';
+
+    final detailFields = <MapEntry<String, String>>[];
+    if (location.isNotEmpty) detailFields.add(MapEntry('Location', location));
+    if (builtYear.isNotEmpty) detailFields.add(MapEntry('Built', builtYear));
+    if (builtBy.isNotEmpty) detailFields.add(MapEntry('Built by', builtBy));
+    if (architecture.isNotEmpty) detailFields.add(MapEntry('Architecture', architecture));
+    if (unesco.isNotEmpty) detailFields.add(MapEntry('UNESCO', unesco));
+    if (significance.isNotEmpty) detailFields.add(MapEntry('Significance', significance));
+    if (unique.isNotEmpty) detailFields.add(MapEntry('Unique Feature', unique));
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.cardSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border(left: BorderSide(color: accent, width: 4)),
+        borderRadius: BorderRadius.circular(18),
+        border: Border(
+          left: BorderSide(color: accent, width: 4),
+        ),
         boxShadow: AppColors.cardShadow,
       ),
       child: Column(
@@ -419,65 +583,39 @@ class _CompareMonumentsScreenState extends State<CompareMonumentsScreen> {
                 fontFamily: AppTypography.playfairDisplay,
               ),
             ),
-          const SizedBox(height: 12),
-          if (location.isNotEmpty)
-            _detailRow('📍', 'Location', location),
-          if (builtYear.isNotEmpty)
-            _detailRow('📅', 'Built', builtYear),
-          if (builtBy.isNotEmpty)
-            _detailRow('👑', 'Built by', builtBy),
-          if (architecture.isNotEmpty)
-            _detailRow('🏛️', 'Architecture', architecture),
-          if (material.isNotEmpty)
-            _detailRow('🧱', 'Material', material),
-          if (unesco.isNotEmpty)
-            _detailRow('🏆', 'UNESCO', unesco),
-          if (height.isNotEmpty)
-            _detailRow('📏', 'Size', height),
-          if (significance.isNotEmpty)
-            _detailRow('💫', 'Significance', significance),
-          if (unique.isNotEmpty)
-            _detailRow('✨', 'Unique', unique),
-          if (bestTime.isNotEmpty)
-            _detailRow('📅', 'Best time', bestTime),
-          if (entryFee.isNotEmpty)
-            _detailRow('💰', 'Entry fee', entryFee),
-          if (visitors.isNotEmpty)
-            _detailRow('👥', 'Visitors/yr', visitors),
-        ],
-      ),
-    );
-  }
-
-  Widget _detailRow(String emoji, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('$emoji  ', style: TextStyle(fontSize: 13)),
-          SizedBox(
-            width: 90,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textMuted,
-                fontFamily: AppTypography.inter,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.textPrimary,
-                fontFamily: AppTypography.inter,
-              ),
-            ),
-          ),
+          const SizedBox(height: 14),
+          ...detailFields.map((f) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 90,
+                      child: Text(
+                        f.key,
+                        style: TextStyle(
+                          fontFamily: AppTypography.inter,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                          color: AppColors.textMuted,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        f.value,
+                        style: TextStyle(
+                          fontFamily: AppTypography.inter,
+                          fontSize: 13,
+                          color: AppColors.textPrimary,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
         ],
       ),
     );
@@ -486,136 +624,279 @@ class _CompareMonumentsScreenState extends State<CompareMonumentsScreen> {
   Widget _buildComparisonSection(Map<String, dynamic> comp) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.cardSurface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: AppColors.cardShadow,
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Comparison',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              fontFamily: AppTypography.playfairDisplay,
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.analytics_outlined, size: 16, color: AppColors.gold),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Comparison',
+                  style: TextStyle(
+                    fontFamily: AppTypography.playfairDisplay,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 17,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
-          if (comp['similarities'] != null) ...[
-            Text(
-              'Similarities',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-                color: AppColors.jade,
-                fontFamily: AppTypography.inter,
-              ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (comp['similarities'] != null)
+                  _buildListSection(
+                    'Similarities',
+                    comp['similarities'] as List,
+                    AppColors.jade,
+                    Icons.check_circle_outline,
+                  ),
+                if (comp['differences'] != null) ...[
+                  const SizedBox(height: 16),
+                  _buildListSection(
+                    'Differences',
+                    comp['differences'] as List,
+                    AppColors.terracotta,
+                    Icons.remove_circle_outline,
+                  ),
+                ],
+                if (comp['which_older'] != null)
+                  _buildVerdictItem('Older', comp['which_older'] as String, Icons.schedule_outlined, AppColors.gold),
+                if (comp['architectural_contrast'] != null)
+                  _buildVerdictItem('Architecture', comp['architectural_contrast'] as String, Icons.account_balance_outlined, AppColors.gold),
+                if (comp['cultural_contrast'] != null)
+                  _buildVerdictItem('Culture', comp['cultural_contrast'] as String, Icons.public_outlined, AppColors.gold),
+                if (comp['verdict_history'] != null)
+                  _buildVerdictItem('History', comp['verdict_history'] as String, Icons.menu_book_outlined, AppColors.jade),
+                if (comp['verdict_architecture'] != null)
+                  _buildVerdictItem('Architecture', comp['verdict_architecture'] as String, Icons.account_balance_outlined, AppColors.jade),
+                if (comp['verdict_tourism'] != null)
+                  _buildVerdictItem('Tourism', comp['verdict_tourism'] as String, Icons.flight_outlined, AppColors.jade),
+                if (comp['combined_visit'] != null)
+                  _buildVerdictItem('Combined Visit', comp['combined_visit'] as String, Icons.map_outlined, AppColors.terracotta),
+              ],
             ),
-            const SizedBox(height: 6),
-            ...(comp['similarities'] as List).map(
-              (s) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('✓ ',
-                        style: TextStyle(color: AppColors.jade, fontSize: 13)),
-                    Expanded(
-                      child: Text(
-                        s as String,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                          fontFamily: AppTypography.inter,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-          if (comp['differences'] != null) ...[
-            Text(
-              'Differences',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-                color: AppColors.terracotta,
-                fontFamily: AppTypography.inter,
-              ),
-            ),
-            const SizedBox(height: 6),
-            ...(comp['differences'] as List).map(
-              (d) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('✗ ',
-                        style: TextStyle(color: AppColors.terracotta, fontSize: 13)),
-                    Expanded(
-                      child: Text(
-                        d as String,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                          fontFamily: AppTypography.inter,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-          if (comp['which_older'] != null)
-            _compareItem('Older', comp['which_older'] as String),
-          if (comp['architectural_contrast'] != null)
-            _compareItem('Architecture', comp['architectural_contrast'] as String),
-          if (comp['cultural_contrast'] != null)
-            _compareItem('Culture', comp['cultural_contrast'] as String),
-          if (comp['verdict_history'] != null)
-            _compareItem('History Verdict', comp['verdict_history'] as String),
-          if (comp['verdict_architecture'] != null)
-            _compareItem('Architecture Verdict', comp['verdict_architecture'] as String),
-          if (comp['verdict_tourism'] != null)
-            _compareItem('Tourism Verdict', comp['verdict_tourism'] as String),
-          if (comp['combined_visit'] != null)
-            _compareItem('Combined Visit', comp['combined_visit'] as String),
+          ),
         ],
       ),
     );
   }
 
-  Widget _compareItem(String label, String value) {
+  Widget _buildListSection(String title, List items, Color color, IconData icon) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 6),
+            Text(
+              title,
+              style: TextStyle(
+                fontFamily: AppTypography.inter,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: color,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...items.map((item) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 6),
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.5),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      item as String,
+                      style: TextStyle(
+                        fontFamily: AppTypography.inter,
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )),
+      ],
+    );
+  }
+
+  Widget _buildVerdictItem(String label, String value, IconData icon, Color color) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, size: 13, color: color),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: AppTypography.inter,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    color: AppColors.textMuted,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontFamily: AppTypography.inter,
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFunFacts(List<dynamic> facts) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.gold.withValues(alpha: 0.06),
+            AppColors.gold.withValues(alpha: 0.02),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.1)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-              color: AppColors.textMuted,
-              fontFamily: AppTypography.inter,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.auto_awesome, size: 16, color: AppColors.gold),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Fun Facts',
+                  style: TextStyle(
+                    fontFamily: AppTypography.inter,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColors.textSecondary,
-              height: 1.4,
-              fontFamily: AppTypography.inter,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: facts.asMap().entries.map((entry) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          color: AppColors.gold.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${entry.key + 1}',
+                            style: TextStyle(
+                              fontFamily: AppTypography.inter,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 10,
+                              color: AppColors.goldDark,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          entry.value as String,
+                          style: TextStyle(
+                            fontFamily: AppTypography.inter,
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
           ),
         ],
@@ -637,57 +918,73 @@ class _ComparisonChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: AppColors.cardSurface,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: AppColors.cardShadow,
-          border: Border.all(color: AppColors.border, width: 1),
-        ),
-        child: Row(
-          children: [
-            Text(
-              m1,
-              style: TextStyle(
-                fontFamily: AppTypography.inter,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.goldDark,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Text(
-                'vs',
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppColors.cardSurface,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: AppColors.cardShadow,
+            border: Border.all(color: AppColors.border, width: 1),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.looks_one_outlined, size: 14, color: AppColors.gold),
+              const SizedBox(width: 6),
+              Text(
+                m1,
                 style: TextStyle(
                   fontFamily: AppTypography.inter,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textMuted,
-                  letterSpacing: 1,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
                 ),
               ),
-            ),
-            Text(
-              m2,
-              style: TextStyle(
-                fontFamily: AppTypography.inter,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.terracotta,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  'vs',
+                  style: TextStyle(
+                    fontFamily: AppTypography.inter,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textMuted,
+                    letterSpacing: 1,
+                  ),
+                ),
               ),
-            ),
-            const Spacer(),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 14,
-              color: AppColors.textMuted.withValues(alpha: 0.6),
-            ),
-          ],
+              Icon(Icons.looks_two_outlined, size: 14, color: AppColors.terracotta),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  m2,
+                  style: TextStyle(
+                    fontFamily: AppTypography.inter,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: AppColors.gold.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 12,
+                  color: AppColors.goldDark,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

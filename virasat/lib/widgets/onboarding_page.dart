@@ -23,59 +23,79 @@ class OnboardingPage extends StatelessWidget {
       child: Column(
         children: [
           const Spacer(flex: 3),
-          // Icon with decorative ring
           Container(
-            width: 140,
-            height: 140,
+            width: 160,
+            height: 160,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.gold.withValues(alpha: 0.08),
-              border: Border.all(
-                color: AppColors.gold.withValues(alpha: 0.2),
-                width: 1.5,
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.gold.withValues(alpha: 0.08),
+                  AppColors.gold.withValues(alpha: 0.02),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              border: Border.all(
+                color: AppColors.gold.withValues(alpha: 0.15),
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.gold.withValues(alpha: 0.06),
+                  blurRadius: 30,
+                  spreadRadius: 4,
+                ),
+              ],
             ),
-            child: Icon(
-              icon,
-              size: 64,
-              color: AppColors.gold,
+            child: Container(
+              margin: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [AppColors.gold, AppColors.goldLight],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.gold.withValues(alpha: 0.2),
+                    blurRadius: 16,
+                  ),
+                ],
+              ),
+              child: Icon(icon, size: 56, color: AppColors.darkBase),
             ),
           ),
           const SizedBox(height: 48),
-          // Title
           Text(
             title,
             textAlign: TextAlign.center,
             style: AppTypography.displayHero.copyWith(fontSize: 28),
           ),
           const SizedBox(height: 10),
-          // Devanagari subtitle
           Text(
             devanagariTitle,
             textAlign: TextAlign.center,
             style: AppTypography.devanagariSubtitle(size: 28),
           ),
-          const SizedBox(height: 28),
-          // Tricolor divider
-          SizedBox(
+          const SizedBox(height: 32),
+          Container(
             width: 60,
             height: 3,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFFFF9933),
-                    Color(0xFFFFFFFF),
-                    Color(0xFF138808),
-                  ],
-                  stops: [0.0, 0.5, 1.0],
-                ),
-                borderRadius: BorderRadius.circular(2),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFFFF9933),
+                  Color(0xFFFFFFFF),
+                  Color(0xFF138808),
+                ],
+                stops: [0.0, 0.5, 1.0],
               ),
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(height: 28),
-          // Description
+          const SizedBox(height: 32),
           Text(
             description,
             textAlign: TextAlign.center,

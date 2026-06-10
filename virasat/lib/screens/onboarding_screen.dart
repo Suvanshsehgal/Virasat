@@ -86,26 +86,64 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // Top bar: Skip
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [AppColors.gold, AppColors.goldLight],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.auto_awesome, color: AppColors.darkBase, size: 16),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Virasat',
+                          style: TextStyle(
+                            fontFamily: AppTypography.playfairDisplay,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 18,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
                     if (!_isLastPage)
                       GestureDetector(
                         onTap: _skip,
-                        child: Text(
-                          'Skip',
-                          style: AppTypography.buttonGhost.copyWith(
-                            color: AppColors.textMuted,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.textMuted.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            'Skip',
+                            style: TextStyle(
+                              fontFamily: AppTypography.inter,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 13,
+                              color: AppColors.textMuted,
+                            ),
                           ),
                         ),
                       ),
                   ],
                 ),
               ),
-              // PageView
               Expanded(
                 child: PageView.builder(
                   controller: _pageController,
@@ -122,21 +160,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   },
                 ),
               ),
-              // Bottom section: dots + button
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Dot indicators
                     _PageIndicator(
                       count: _pages.length,
                       currentIndex: _currentPage,
                     ),
                     const SizedBox(height: 32),
-                    // Next / Get Started button
                     _GoldButton(
                       label: _isLastPage ? 'Get Started' : 'Next',
+                      icon: _isLastPage
+                          ? Icons.arrow_forward
+                          : Icons.arrow_forward,
                       onTap: _goNext,
                     ),
                   ],
@@ -165,12 +203,25 @@ class _PageIndicator extends StatelessWidget {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOutCubic,
-          width: isActive ? 28 : 8,
+          width: isActive ? 32 : 8,
           height: 8,
           margin: const EdgeInsets.symmetric(horizontal: 4),
           decoration: BoxDecoration(
-            color: isActive ? AppColors.gold : AppColors.border,
+            gradient: isActive
+                ? const LinearGradient(
+                    colors: [AppColors.gold, AppColors.goldLight],
+                  )
+                : null,
+            color: isActive ? null : AppColors.border,
             borderRadius: BorderRadius.circular(4),
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: AppColors.gold.withValues(alpha: 0.3),
+                      blurRadius: 6,
+                    ),
+                  ]
+                : null,
           ),
         );
       }),
@@ -180,9 +231,14 @@ class _PageIndicator extends StatelessWidget {
 
 class _GoldButton extends StatefulWidget {
   final String label;
+  final IconData icon;
   final VoidCallback onTap;
 
-  const _GoldButton({required this.label, required this.onTap});
+  const _GoldButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
 
   @override
   State<_GoldButton> createState() => _GoldButtonState();
@@ -229,20 +285,30 @@ class _GoldButtonState extends State<_GoldButton>
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
-                color: AppColors.gold,
-                borderRadius: BorderRadius.circular(12),
+                gradient: const LinearGradient(
+                  colors: [AppColors.gold, AppColors.goldLight],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.glow,
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
                   ),
                 ],
               ),
-              child: Text(
-                widget.label,
-                textAlign: TextAlign.center,
-                style: AppTypography.buttonGold.copyWith(fontSize: 17),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    widget.label,
+                    style: AppTypography.buttonGold.copyWith(fontSize: 17),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(widget.icon, size: 20, color: AppColors.darkBase),
+                ],
               ),
             ),
           );
@@ -265,5 +331,3 @@ class _PageData {
     required this.description,
   });
 }
-
-

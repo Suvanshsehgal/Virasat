@@ -21,12 +21,18 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _taglineController;
   late Animation<double> _taglineFade;
 
+  late AnimationController _glowController;
+  late Animation<double> _glowAnimation;
+
+  late AnimationController _loadingController;
+  late Animation<double> _loadingProgress;
+
   @override
   void initState() {
     super.initState();
 
     _entryController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 900),
       vsync: this,
     );
     _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
@@ -40,11 +46,27 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _taglineController = AnimationController(
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 700),
       vsync: this,
     );
     _taglineFade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _taglineController, curve: Curves.easeOut),
+    );
+
+    _glowController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    )..repeat(reverse: true);
+    _glowAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _glowController, curve: Curves.easeInOutSine),
+    );
+
+    _loadingController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    )..repeat(reverse: true);
+    _loadingProgress = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _loadingController, curve: Curves.easeInOut),
     );
 
     _entryController.forward();
@@ -71,6 +93,8 @@ class _SplashScreenState extends State<SplashScreen>
   void dispose() {
     _entryController.dispose();
     _taglineController.dispose();
+    _glowController.dispose();
+    _loadingController.dispose();
     super.dispose();
   }
 
@@ -78,119 +102,141 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return LinenBackground(
       child: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: SlideTransition(
-            position: _slideAnimation,
-            child: Column(
-              children: [
-                const Spacer(flex: 2),
-                const AshokaChakra(size: 64, animate: true),
-                const SizedBox(height: 40),
-                Text(
-                  'Virasat',
-                  style: AppTypography.displayHero.copyWith(fontSize: 42),
+        child: AnimatedBuilder(
+          animation: _glowAnimation,
+          builder: (context, child) {
+            return Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment.center,
+                  radius: 0.8,
+                  colors: [
+                    AppColors.gold.withValues(alpha: 0.03 * _glowAnimation.value),
+                    Colors.transparent,
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'विरासत',
-                  style: AppTypography.devanagariSubtitle(size: 42)
-                      .copyWith(fontSize: 24),
-                ),
-                const SizedBox(height: 20),
-                FadeTransition(
-                  opacity: _taglineFade,
-                  child: Column(
-                    children: [
-                      Text(
-                        "Discover India's Heritage",
-                        style: AppTypography.body.copyWith(
-                          color: AppColors.textSecondary,
-                          fontSize: 16,
+              ),
+              child: child,
+            );
+          },
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: Column(
+                children: [
+                  const Spacer(flex: 2),
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.gold.withValues(alpha: 0.15),
+                          blurRadius: 40,
+                          spreadRadius: 8,
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'भारत की विरासत खोजें',
-                        style: AppTypography.devanagariSubtitle(size: 16),
-                      ),
-                    ],
+                      ],
+                    ),
+                    child: const AshokaChakra(size: 100, animate: true),
                   ),
-                ),
-                const Spacer(flex: 2),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 48),
-                  child: _GoldLoadingBar(),
-                ),
-              ],
+                  const SizedBox(height: 36),
+                  Text(
+                    'Virasat',
+                    style: AppTypography.displayHero.copyWith(fontSize: 44),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'विरासत',
+                    style: AppTypography.devanagariSubtitle(size: 44)
+                        .copyWith(fontSize: 26),
+                  ),
+                  const SizedBox(height: 24),
+                  FadeTransition(
+                    opacity: _taglineFade,
+                    child: Column(
+                      children: [
+                        Text(
+                          "Discover India's Heritage",
+                          style: AppTypography.body.copyWith(
+                            color: AppColors.textSecondary,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'भारत की विरासत खोजें',
+                          style: AppTypography.devanagariSubtitle(size: 16),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(flex: 2),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 48),
+                    child: _buildLoadingBar(),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
   }
-}
 
-class _GoldLoadingBar extends StatefulWidget {
-  @override
-  State<_GoldLoadingBar> createState() => _GoldLoadingBarState();
-}
-
-class _GoldLoadingBarState extends State<_GoldLoadingBar>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _progress;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    )..repeat(reverse: true);
-    _progress = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildLoadingBar() {
     return AnimatedBuilder(
-      animation: _progress,
+      animation: _loadingProgress,
       builder: (context, _) {
-        return Container(
-          width: 120,
-          height: 3,
-          decoration: BoxDecoration(
-            color: AppColors.border,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: 0.5 + _progress.value * 0.5,
-            child: Container(
+        return Column(
+          children: [
+            Container(
+              width: 140,
+              height: 3,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    AppColors.goldDark,
-                    AppColors.gold,
-                    AppColors.goldLight,
-                  ],
-                ),
+                color: AppColors.border,
                 borderRadius: BorderRadius.circular(4),
               ),
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: 0.4 + _loadingProgress.value * 0.6,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        AppColors.goldDark,
+                        AppColors.gold,
+                        AppColors.goldLight,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.gold.withValues(alpha: 0.3),
+                        blurRadius: 6,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ),
+            const SizedBox(height: 12),
+            Text(
+              'Loading...',
+              style: TextStyle(
+                fontFamily: AppTypography.inter,
+                fontSize: 11,
+                color: AppColors.textMuted,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
         );
       },
     );
   }
 }
-
-

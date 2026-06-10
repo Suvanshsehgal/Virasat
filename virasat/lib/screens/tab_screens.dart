@@ -8,8 +8,8 @@ import '../services/heritage_api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../theme/app_decorations.dart';
-import '../theme/app_animations.dart';
-import '../widgets/ashoka_chakra.dart';
+import '../widgets/gold_button.dart';
+import '../widgets/loading_overlay.dart';
 import '../widgets/heritage_list_card.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -381,46 +381,54 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   Marker _userMarker() {
     return Marker(
-      width: 48,
-      height: 48,
+      width: 52,
+      height: 52,
       point: LatLng(_currentLat!, _currentLng!),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.jade,
+          gradient: const LinearGradient(
+            colors: [AppColors.jade, Color(0xFF1B5E20)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: AppColors.jade.withValues(alpha: 0.4),
-              blurRadius: 12,
-              spreadRadius: 2,
+              color: AppColors.jade.withValues(alpha: 0.5),
+              blurRadius: 16,
+              spreadRadius: 3,
             ),
           ],
         ),
-        child: const Icon(Icons.my_location, color: Colors.white, size: 24),
+        child: const Icon(Icons.my_location, color: Colors.white, size: 26),
       ),
     );
   }
 
   Marker _heritageMarker(HeritagePlace place) {
     return Marker(
-      width: 48,
-      height: 48,
+      width: 52,
+      height: 52,
       point: LatLng(place.latitude, place.longitude),
       child: GestureDetector(
         onTap: () => _showPlaceInfo(place),
         child: Container(
           decoration: BoxDecoration(
-            color: AppColors.terracotta,
+            gradient: const LinearGradient(
+              colors: [AppColors.terracotta, AppColors.terracottaLight],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: AppColors.terracotta.withValues(alpha: 0.3),
-                blurRadius: 8,
-                spreadRadius: 1,
+                color: AppColors.terracotta.withValues(alpha: 0.4),
+                blurRadius: 12,
+                spreadRadius: 2,
               ),
             ],
           ),
-          child: const Icon(Icons.location_on, color: Colors.white, size: 24),
+          child: const Icon(Icons.location_on, color: Colors.white, size: 26),
         ),
       ),
     );
@@ -449,16 +457,45 @@ class _ExploreScreenState extends State<ExploreScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Nearby Heritage Places',
-                  style: AppTypography.screenTitle.copyWith(fontSize: 22),
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [AppColors.gold, AppColors.goldLight],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.gold.withValues(alpha: 0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.explore_outlined, color: AppColors.darkBase, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Nearby Heritage Places',
+                          style: AppTypography.screenTitle.copyWith(fontSize: 20),
+                        ),
+                        Text(
+                          'आस-पास के विरासत स्थल',
+                          style: AppTypography.devanagariSubtitle(size: 20),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'आस-पास के विरासत स्थल',
-                  style: AppTypography.devanagariSubtitle(size: 22),
-                ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Container(
                   height: 3,
                   decoration: AppDecorations.tricolorDivider,
@@ -479,45 +516,96 @@ class _ExploreScreenState extends State<ExploreScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Search Radius',
-          style: AppTypography.metadata.copyWith(fontSize: 11),
+        Row(
+          children: [
+            Icon(Icons.radio_button_checked_outlined, size: 14, color: AppColors.goldDark),
+            const SizedBox(width: 6),
+            Text(
+              'Search Radius',
+              style: TextStyle(
+                fontFamily: AppTypography.inter,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+                color: AppColors.textPrimary,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 6),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: _radiusOptions.map((km) {
-              final active = _selectedRadius == km;
-              return Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: GestureDetector(
-                  onTap: () => setState(() => _selectedRadius = km),
-                  child: AnimatedContainer(
-                    duration: AppAnimations.duration300,
-                    curve: AppAnimations.entryCurve,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: active
-                        ? AppDecorations.filterPillActive
-                        : AppDecorations.filterPillInactive,
-                    child: Text(
-                      '$km km',
-                      style: TextStyle(
-                        fontFamily: AppTypography.inter,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 12,
-                        color: active
-                            ? AppColors.darkBase
-                            : AppColors.terracotta,
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: AppColors.cardSurface,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: AppColors.cardShadow,
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _radiusOptions.map((km) {
+                final active = _selectedRadius == km;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedRadius = km),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeOutCubic,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: active
+                            ? const LinearGradient(
+                                colors: [AppColors.gold, AppColors.goldLight],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              )
+                            : null,
+                        color: active ? null : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: active
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.gold.withValues(alpha: 0.25),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '$km',
+                            style: TextStyle(
+                              fontFamily: AppTypography.inter,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: active ? AppColors.darkBase : AppColors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            'km',
+                            style: TextStyle(
+                              fontFamily: AppTypography.inter,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 9,
+                              color: active
+                                  ? AppColors.darkBase.withValues(alpha: 0.7)
+                                  : AppColors.textMuted,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ),
-              );
-            }).toList(),
+                );
+              }).toList(),
+            ),
           ),
         ),
       ],
@@ -525,122 +613,58 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   Widget _searchButton() {
-    final isLoading = _loading;
-    return SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : _search,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.gold,
-          foregroundColor: AppColors.darkBase,
-          disabledBackgroundColor: AppColors.gold.withValues(alpha: 0.5),
-          disabledForegroundColor: AppColors.darkBase.withValues(alpha: 0.5),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-        ),
-        child: isLoading
-            ? Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: AppColors.darkBase,
-                    ),
+    return _loading
+        ? Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: AppColors.gold,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.glow,
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: AppColors.darkBase.withValues(alpha: 0.7),
                   ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Searching...',
-                    style: AppTypography.buttonGold.copyWith(fontSize: 15),
-                  ),
-                ],
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.explore_outlined, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Discover Heritage Places',
-                    style: AppTypography.buttonGold.copyWith(fontSize: 15),
-                  ),
-                ],
-              ),
-      ),
-    );
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Searching...',
+                  style: AppTypography.buttonGold.copyWith(fontSize: 15),
+                ),
+              ],
+            ),
+          )
+        : GoldButton(
+            label: 'Discover Heritage Places',
+            onTap: _search,
+          );
   }
 
   Widget _loadingOverlay() {
-    return Positioned.fill(
-      child: Container(
-        color: AppColors.pageBg.withValues(alpha: 0.88),
-        child: Center(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 48),
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
-            decoration: BoxDecoration(
-              color: AppColors.cardSurface,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.warmShadow.withValues(alpha: 0.3),
-                  blurRadius: 40,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const AshokaChakra(size: 48, animate: true),
-                const SizedBox(height: 20),
-                Text(
-                  'Searching...',
-                  style: AppTypography.sectionHeader.copyWith(fontSize: 18),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'खोज रहा है',
-                  style: AppTypography.devanagariSubtitle(size: 18),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Discovering heritage sites near you...',
-                  style: AppTypography.body.copyWith(
-                    color: AppColors.textMuted,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: const SizedBox(
-                    width: 140,
-                    height: 4,
-                    child: LinearProgressIndicator(
-                      color: AppColors.gold,
-                      backgroundColor: AppColors.border,
-                      minHeight: 4,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+    return const Positioned.fill(
+      child: LoadingOverlay(
+        title: 'Searching...',
+        devanagari: 'खोज रहा है',
       ),
     );
   }
 
   Widget _statusBanner(String message, {bool isError = false}) {
+    final color = isError ? AppColors.terracotta : AppColors.goldDark;
     return Positioned(
       top: MediaQuery.of(context).padding.top + 210,
       left: 20,
@@ -650,14 +674,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isError ? AppColors.terracotta : AppColors.goldDark,
-            borderRadius: BorderRadius.circular(14),
+            color: color,
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: (isError ? AppColors.terracotta : AppColors.goldDark)
-                    .withValues(alpha: 0.35),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
+                color: color.withValues(alpha: 0.35),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
@@ -668,12 +691,17 @@ class _ExploreScreenState extends State<ExploreScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 1),
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
                     child: Icon(
                       isError ? Icons.error_outline : Icons.info_outline,
                       color: Colors.white,
-                      size: 18,
+                      size: 14,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -703,21 +731,28 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.3),
+                          color: Colors.white.withValues(alpha: 0.2),
                         ),
                       ),
-                      child: const Text(
-                        'Retry',
-                        style: TextStyle(
-                          fontFamily: AppTypography.inter,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                          letterSpacing: 0.5,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.refresh, size: 14, color: Colors.white),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'Retry',
+                            style: TextStyle(
+                              fontFamily: AppTypography.inter,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -751,19 +786,26 @@ class _ExploreScreenState extends State<ExploreScreen> {
             boxShadow: [
               BoxShadow(
                 color: AppColors.warmShadow,
-                blurRadius: 8,
-                offset: const Offset(0, -2),
+                blurRadius: 16,
+                offset: const Offset(0, -4),
               ),
             ],
           ),
           child: Center(
-            child: AnimatedContainer(
-              duration: AppAnimations.duration300,
-              width: 36,
+            child: Container(
+              width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.gold.withValues(alpha: 0.5),
+                gradient: const LinearGradient(
+                  colors: [AppColors.gold, AppColors.goldLight],
+                ),
                 borderRadius: BorderRadius.circular(2),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.gold.withValues(alpha: 0.3),
+                    blurRadius: 4,
+                  ),
+                ],
               ),
             ),
           ),
@@ -810,11 +852,19 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
-                            vertical: 3,
+                            vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.gold.withValues(alpha: 0.15),
+                            gradient: const LinearGradient(
+                              colors: [AppColors.gold, AppColors.goldLight],
+                            ),
                             borderRadius: BorderRadius.circular(6),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.gold.withValues(alpha: 0.2),
+                                blurRadius: 4,
+                              ),
+                            ],
                           ),
                           child: Text(
                             '${_places.length}',
@@ -822,7 +872,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                               fontFamily: AppTypography.inter,
                               fontWeight: FontWeight.w700,
                               fontSize: 12,
-                              color: AppColors.goldDark,
+                              color: AppColors.darkBase,
                             ),
                           ),
                         ),
@@ -844,12 +894,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: AppColors.deepSurface,
+                          color: AppColors.gold.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
                           Icons.keyboard_arrow_down_rounded,
-                          color: AppColors.textMuted,
+                          color: AppColors.goldDark,
                           size: 18,
                         ),
                       ),
