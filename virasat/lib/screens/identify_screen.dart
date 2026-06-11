@@ -73,8 +73,7 @@ class _IdentifyScreenState extends State<IdentifyScreen>
 
   Future<void> _pickFile() async {
     final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+      type: FileType.image,
     );
     if (result != null && result.files.single.path != null) {
       setState(() {
